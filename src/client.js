@@ -69,6 +69,17 @@ Conch._writeMessage = function( string, styles ) {
   }
 }
 
+Conch.setEndpoint = function( string ) {
+
+  console.warn("This method is untested.");
+
+  sock.emit('disconnect')
+  sock.close()
+
+  sock = io( string , {
+    'forceNew' : true
+  })
+}
 
 /**
  * Sets the clientside username and stores it
