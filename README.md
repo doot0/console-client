@@ -1,2 +1,2 @@
-# conch-client
+# 🐚 client
 clientside for conch chat
