@@ -4,13 +4,14 @@ const INCOMING = '📥'
 const OUTGOING = '📤'
 const CONCH_LOGO = '🐚'
 
-const ENDPOINT = 'localhost:8432';
+const ENDPOINT = 'direct.doot0.co.uk:8432';
 
 const CONCH_STYLES = {
   'big'      : 'font-size: 1.1em; ',
   'feedback' : 'font-style: italic; ',
   'heavy'    : 'font-weight: bold; ',
-  'bright'   : 'color: #999; '
+  'bright'   : 'color: #999; ',
+  'warning'  : 'color: red; '
 }
 
 var Conch = {}
@@ -69,18 +70,6 @@ Conch._writeMessage = function( string, styles ) {
   }
 }
 
-Conch.setEndpoint = function( string ) {
-
-  console.warn("This method is untested.");
-
-  sock.emit('disconnect')
-  sock.close()
-
-  sock = io( string , {
-    'forceNew' : true
-  })
-}
-
 /**
  * Sets the clientside username and stores it
  * @param  {String} string The username
@@ -99,6 +88,22 @@ Conch.setUsername = function( string ){
     'Your username is now "' + string + '."',
     CONCH_STYLES.heavy + CONCH_STYLES.bright
   )
+
+}
+
+
+/*
+  Enables the use of convenient shortcuts by gallantly polluting global scope
+ */
+Conch.enableShortCommands = function() {
+
+  Conch._writeMessage(
+    NEWLINE_TOKEN
+    + "You can now use say() in place of Conch.say(). Heads up - this pollutes window scope, but it'll go away on exit.",
+    CONCH_STYLES.feedback + CONCH_STYLES.bright
+  )
+
+  window['say'] = Conch.say
 
 }
 
