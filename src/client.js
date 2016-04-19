@@ -4,7 +4,8 @@ const INCOMING = '📥'
 const OUTGOING = '📤'
 const CONCH_LOGO = '🐚'
 
-const ENDPOINT = 'direct.doot0.co.uk:8432';
+// const ENDPOINT = 'direct.doot0.co.uk:8432';
+const ENDPOINT = 'localhost:8432';
 
 const CONCH_STYLES = {
   'big'      : 'font-size: 1.1em; ',
@@ -13,6 +14,8 @@ const CONCH_STYLES = {
   'bright'   : 'color: #999; ',
   'warning'  : 'color: red; '
 }
+
+const KEEPALIVE_INTERVAL = 2500;
 
 var Conch = {}
 
@@ -71,6 +74,43 @@ Conch._writeMessage = function( string, styles ) {
 }
 
 /**
+ * Keepalive
+ * @param  {[type]} data [description]
+ * @return {[type]}      [description]
+ */
+Conch._keepAlive = function(){
+
+  setInterval(function(){
+
+    sock.emit('keepalive', {
+      uuid: Conch._getUserId()
+    })
+
+  }, KEEPALIVE_INTERVAL);
+
+}
+
+/*
+  Write some intro text to the console
+ */
+Conch._intro = function(){
+
+  Conch._writeMessage(
+    NEWLINE_TOKEN +
+    '=================' +
+    NEWLINE_TOKEN +
+    ' Conch is ready.' +
+    NEWLINE_TOKEN +
+    '=================' +
+    NEWLINE_TOKEN +
+    NEWLINE_TOKEN +
+    `Call "Conch.setUsername()" to set your username. When you've done that, you can use "Conch.say()" to send a message. Have fun!`
+    ,CONCH_STYLES.heavy
+  )
+
+}
+
+/**
  * Sets the clientside username and stores it
  * @param  {String} string The username
  * @return null
@@ -79,6 +119,15 @@ Conch.setUsername = function( string ){
 
   var currentUsername = Conch._getUsername()
   Conch._storeUsername( string )
+
+  if( string === undefined ) {
+    Conch._writeMessage(
+      "Enter at least one character.",
+      CONCH_STYLES.heavy + CONCH_STYLES.bright
+    )
+    return;
+  }
+
   sock.emit('user namechange', {
     old: currentUsername,
     new : string
@@ -105,6 +154,10 @@ Conch.enableShortCommands = function() {
 
   window['say'] = Conch.say
 
+}
+
+Conch.getConnectedUsers = function() {
+  sock.emit('request connected users')
 }
 
 /**
@@ -158,6 +211,14 @@ Conch.say = function( string ){
   })
 }
 
+/**
+ * Bootstrapper
+ */
+Conch.init = function() {
+  Conch._keepAlive()
+  Conch._intro()
+}
+
 /*
   Emits the user object to the socket
  */
@@ -197,22 +258,45 @@ sock.on('user connect', function(data){
 })
 
 /*
-  Emits a disconnect event to the socket if the window closes
+  Handles user disconnect events
  */
-window.onbeforeunload = sock.emit('disconnect', Conch.User())
+sock.on('user disconnect', function(data){
+
+  // cleanup connected users
+  sock.emit('user cleanup');
+
+  Conch._writeMessage(
+    "Somebody disconnected.",
+    CONCH_STYLES.heavy
+  )
+
+})
+
+sock.on('knock', function(){
+  sock.emit('keepalive', Conch.User())
+})
+
+sock.on('connected users', function(data){
+
+  var users = data.toString(),
+      processedUsers = users.split(',').join(', ')
+  var justMe = (data.length == 1)
+
+  if(justMe) {
+    Conch._writeMessage(
+      "It's just you and me in here, bub.",
+      CONCH_STYLES.bright
+    )
+  } else {
+    Conch._writeMessage(
+      "Users online: " + processedUsers,
+      CONCH_STYLES.bright
+    )
+  }
+
+})
 
 /*
-  The rest is just some basic onboarding.
+  Do the thing!
  */
-Conch._writeMessage(
-  NEWLINE_TOKEN +
-  '=================' +
-  NEWLINE_TOKEN +
-  ' Conch is ready.' +
-  NEWLINE_TOKEN +
-  '=================' +
-  NEWLINE_TOKEN +
-  NEWLINE_TOKEN +
-  `Call "Conch.setUsername()" to set your username. When you've done that, you can use "Conch.say()" to send a message. Have fun!`
-  ,CONCH_STYLES.heavy
-)
+Conch.init()
